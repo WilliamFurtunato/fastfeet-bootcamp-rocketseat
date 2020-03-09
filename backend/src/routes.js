@@ -10,6 +10,7 @@ import FileController from './app/controllers/FileController';
 import OrderController from './app/controllers/OrderController';
 import DeliveryController from './app/controllers/DeliveryController';
 import ScheduleController from './app/controllers/ScheduleController';
+import NotificationController from './app/controllers/NotificationController';
 
 import authMiddleware from './app/middlewares/auth';
 
@@ -20,6 +21,9 @@ routes.post('/users', UserController.store);
 routes.post('/sessions', SessionController.store);
 
 routes.get('/deliveryman/:id/deliveries', ScheduleController.index);
+
+routes.get('/deliveryman/:id/notifications', NotificationController.index);
+routes.put('/notification/:id', NotificationController.update);
 
 routes.use(authMiddleware);
 

@@ -4,6 +4,7 @@ import { startOfHour, parseISO, isBefore } from 'date-fns';
 import Order from '../models/Order';
 import Recipient from '../models/Recipient';
 import Deliveryman from '../models/Deliveryman';
+import Notification from '../schemas/Notification';
 
 class OrderController {
   async index(req, res) {
@@ -65,6 +66,13 @@ class OrderController {
       recipient_id,
       deliveryman_id,
       start_date: hourStart,
+    });
+
+    // notify deliveryman
+
+    await Notification.create({
+      content: `NOVA ENCOMENDA - O item '${product}' já está disponível para retirada `,
+      user: deliveryman_id,
     });
 
     return res.json(order);
