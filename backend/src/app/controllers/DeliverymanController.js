@@ -1,8 +1,24 @@
 import * as Yup from 'yup';
 
 import Deliveryman from '../models/Deliveryman';
+import File from '../models/File';
 
 class DeliverymanController {
+  async index(req, res) {
+    const deliverymans = await Deliveryman.findAll({
+      attributes: ['id', 'name', 'email', 'avatar_id'],
+      include: [
+        {
+          model: File,
+          as: 'avatar',
+          attributes: ['name', 'path', 'url'],
+        },
+      ],
+    });
+
+    return res.json(deliverymans);
+  }
+
   async store(req, res) {
     const schema = Yup.object().shape({
       name: Yup.string().required(),
@@ -55,6 +71,17 @@ class DeliverymanController {
     const { id, name } = await deliveryman.update(req.body);
 
     return res.json({ id, name, email });
+  }
+
+  async delete(req, res) {
+    const deliveryman = await Deliveryman.findByPk(req.params.id);
+
+    try {
+      await deliveryman.destroy();
+      res.json({ message: 'Successfully deleted' });
+    } catch (error) {
+      res.status(400).json({ error: 'Error when deleting Deliveryman' });
+    }
   }
 }
 
