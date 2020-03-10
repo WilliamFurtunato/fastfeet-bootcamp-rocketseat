@@ -6,6 +6,9 @@ import Recipient from '../models/Recipient';
 import Deliveryman from '../models/Deliveryman';
 import Notification from '../schemas/Notification';
 
+import CancellationMail from '../jobs/CancellationMail';
+import Queue from '../../lib/Queue';
+
 class OrderController {
   async index(req, res) {
     const deliveries = await Order.findAll();
@@ -74,6 +77,39 @@ class OrderController {
       content: `NOVA ENCOMENDA - O item '${product}' já está disponível para retirada `,
       user: deliveryman_id,
     });
+
+    return res.json(order);
+  }
+
+  async delete(req, res) {
+    const order = await Order.findiByPk(req.params.id, {
+      include: [
+        {
+          model: Deliveryman,
+          as: 'deliveryman',
+          attributes: ['name', 'email'],
+        },
+        {
+          model: Recipient,
+          as: 'recipient',
+          attributes: [
+            'name',
+            'street',
+            'numb',
+            'complement',
+            'state',
+            'city',
+            'zip_code',
+          ],
+        },
+      ],
+    });
+
+    order.canceled_at = new Date();
+
+    await order.save();
+
+    await Queue.add(CancellationMail.key, { order });
 
     return res.json(order);
   }
