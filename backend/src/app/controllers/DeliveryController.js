@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import Order from '../models/Order';
 import Recipient from '../models/Recipient';
 
@@ -8,11 +9,13 @@ class DeliveryController {
     const orders = await Order.findAll({
       where: {
         deliveryman_id: req.params.id,
-        end_date: null,
         canceled_at: null,
+        end_date: {
+          [Op.ne]: null,
+        },
       },
-      order: ['start_date'],
-      attributes: ['id', 'product', 'start_date'],
+      order: ['end_date'],
+      attributes: ['id', 'product', 'end_date'],
       limit: 20,
       offset: (page - 1) * 20,
       include: [
@@ -36,7 +39,21 @@ class DeliveryController {
   }
 
   async update(req, res) {
-    // start delivery
+    const { id, orderId } = req.params;
+
+    const order = await Order.findByPk(orderId);
+
+    if (!(order.deliveryman_id.toString() === id)) {
+      return res
+        .status(401)
+        .json({ error: 'You are not authorized to deliver this product' });
+    }
+
+    const { product, start_date, end_date } = await order.update({
+      end_date: new Date(),
+    });
+
+    return res.json({ product, start_date, end_date });
   }
 }
 
