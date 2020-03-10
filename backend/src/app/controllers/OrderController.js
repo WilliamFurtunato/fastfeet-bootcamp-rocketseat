@@ -7,6 +7,7 @@ import Deliveryman from '../models/Deliveryman';
 import Notification from '../schemas/Notification';
 
 import CancellationMail from '../jobs/CancellationMail';
+import NewOrderMail from '../jobs/NewOrderMail';
 import Queue from '../../lib/Queue';
 
 class OrderController {
@@ -21,68 +22,87 @@ class OrderController {
       product: Yup.string().required(),
       recipient_id: Yup.number().required(),
       deliveryman_id: Yup.number().required(),
-      start_date: Yup.date().required(),
     });
 
     if (!(await schema.isValid(req.body))) {
       return res.status(400).json({ error: 'Validation fails' });
     }
-    const { product, recipient_id, deliveryman_id, start_date } = req.body;
 
     // check if recipient_id exists
-    const recipientExists = await Recipient.findByPk(recipient_id);
+    const recipientExists = await Recipient.findByPk(req.body.recipient_id);
     if (!recipientExists) {
       return res.status(400).json({ error: 'Recipient does not exists' });
     }
 
     // check if deliveryman_id exists
-    const deliverymanExists = await Deliveryman.findByPk(deliveryman_id);
+    const deliverymanExists = await Deliveryman.findByPk(
+      req.body.deliveryman_id
+    );
     if (!deliverymanExists) {
       return res.status(400).json({ error: 'Deliveryman does not exists' });
     }
 
     // Check for past dates
-    const hourStart = startOfHour(parseISO(start_date));
+    // const hourStart = startOfHour(parseISO(start_date));
 
-    if (isBefore(hourStart, new Date())) {
-      return res.status(400).json({ error: 'Past dates are not permitted' });
-    }
+    // if (isBefore(hourStart, new Date())) {
+    //   return res.status(400).json({ error: 'Past dates are not permitted' });
+    // }
 
     // check dates availability
 
-    const checkAvailability = await Order.findOne({
-      where: {
-        deliveryman_id,
-        canceled_at: null,
-        start_date: hourStart,
-      },
+    // const checkAvailability = await Order.findOne({
+    //   where: {
+    //     deliveryman_id,
+    //     canceled_at: null,
+    //     start_date: hourStart,
+    //   },
+    // });
+
+    // if (checkAvailability) {
+    //   return res
+    //     .status(400)
+    //     .json({ error: 'Delivery date is not availability' });
+    // }
+
+    const order = await Order.create(req.body);
+
+    const orderToMail = await Order.findByPk(order.id, {
+      include: [
+        {
+          model: Deliveryman,
+          as: 'deliveryman',
+          attributes: ['name', 'email'],
+        },
+        {
+          model: Recipient,
+          as: 'recipient',
+          attributes: [
+            'name',
+            'street',
+            'numb',
+            'complement',
+            'state',
+            'city',
+            'zip_code',
+          ],
+        },
+      ],
     });
 
-    if (checkAvailability) {
-      return res
-        .status(400)
-        .json({ error: 'Delivery date is not availability' });
-    }
-
-    const order = await Order.create({
-      product,
-      recipient_id,
-      deliveryman_id,
-      start_date: hourStart,
-    });
+    await Queue.add(NewOrderMail.key, { orderToMail });
 
     // notify deliveryman
-
     await Notification.create({
-      content: `NOVA ENCOMENDA - O item '${product}' já está disponível para retirada `,
-      user: deliveryman_id,
+      content: `NOVA ENCOMENDA - O item '${req.body.product}' já está disponível para retirada `,
+      user: req.body.deliveryman_id,
     });
 
     return res.json(order);
   }
 
   async delete(req, res) {
-    const order = await Order.findiByPk(req.params.id, {
+    const order = await Order.findByPk(req.params.id, {
       include: [
         {
           model: Deliveryman,
