@@ -3,6 +3,7 @@ import * as Yup from 'yup';
 import Order from '../models/Order';
 import Recipient from '../models/Recipient';
 import Deliveryman from '../models/Deliveryman';
+import File from '../models/File';
 import Notification from '../schemas/Notification';
 
 import CancellationMail from '../jobs/CancellationMail';
@@ -11,8 +12,54 @@ import Queue from '../../lib/Queue';
 
 class OrderController {
   async index(req, res) {
+    const { page = 1 } = req.query;
+
     const deliveries = await Order.findAll({
       order: ['id'],
+      attributes: [
+        'id',
+        'product',
+        'start_date',
+        'end_date',
+        'canceled_at',
+        'recipient_id',
+        'deliveryman_id',
+        'signature_id',
+      ],
+      limit: 10,
+      offset: (page - 1) * 10,
+      include: [
+        {
+          model: Recipient,
+          as: 'recipient',
+          attributes: [
+            'name',
+            'street',
+            'numb',
+            'complement',
+            'state',
+            'city',
+            'zip_code',
+          ],
+        },
+        {
+          model: Deliveryman,
+          as: 'deliveryman',
+          attributes: ['id', 'name', 'email', 'avatar_id'],
+          include: [
+            {
+              model: File,
+              as: 'avatar',
+              attributes: ['name', 'path', 'url'],
+            },
+          ],
+        },
+        {
+          model: File,
+          as: 'signature',
+          attributes: ['name', 'path', 'url'],
+        },
+      ],
     });
 
     return res.json(deliveries);
@@ -43,9 +90,11 @@ class OrderController {
       return res.status(400).json({ error: 'Deliveryman does not exists' });
     }
 
-    const order = await Order.create(req.body);
+    const { id, product, recipient_id, deliveryman_id } = await Order.create(
+      req.body
+    );
 
-    const orderToMail = await Order.findByPk(order.id, {
+    const orderToMail = await Order.findByPk(id, {
       include: [
         {
           model: Deliveryman,
@@ -76,7 +125,7 @@ class OrderController {
       user: req.body.deliveryman_id,
     });
 
-    return res.json(order);
+    return res.json({ id, product, recipient_id, deliveryman_id });
   }
 
   async delete(req, res) {

@@ -14,7 +14,40 @@ import Recipient from '../models/Recipient';
 
 class ScheduleController {
   async index(req, res) {
-    const { page = 1 } = req.query;
+    const { page = 1, delivered = 'false' } = req.query;
+
+    if (delivered === 'true') {
+      const orders = await Order.findAll({
+        where: {
+          deliveryman_id: req.params.id,
+          canceled_at: null,
+          end_date: {
+            [Op.ne]: null,
+          },
+        },
+        order: ['end_date'],
+        attributes: ['id', 'product', 'start_date', 'end_date'],
+        limit: 20,
+        offset: (page - 1) * 20,
+        include: [
+          {
+            model: Recipient,
+            as: 'recipient',
+            attributes: [
+              'name',
+              'street',
+              'numb',
+              'complement',
+              'state',
+              'city',
+              'zip_code',
+            ],
+          },
+        ],
+      });
+
+      return res.json(orders);
+    }
 
     const orders = await Order.findAll({
       where: {
@@ -74,6 +107,7 @@ class ScheduleController {
       });
     }
 
+    // check limit deliveries per day
     const todaysDeliveries = await Order.findAndCountAll({
       where: {
         deliveryman_id: id,

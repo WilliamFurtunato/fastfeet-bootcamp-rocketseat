@@ -21,32 +21,19 @@ const upload = multer(multerConfig);
 routes.post('/users', UserController.store);
 routes.post('/sessions', SessionController.store);
 
-routes.get('/deliveryman/:id/delivered', DeliveryController.index);
-routes.put('/deliveryman/:id/order/:orderId/end', DeliveryController.update);
+routes.put(
+  '/deliveryman/:id/order/:orderId/end-delivery',
+  DeliveryController.update
+);
 
 routes.get('/deliveryman/:id/deliveries', ScheduleController.index);
-routes.put('/deliveryman/:id/order/:orderId/start', ScheduleController.update);
+routes.put(
+  '/deliveryman/:id/order/:orderId/start-delivery',
+  ScheduleController.update
+);
 
 routes.get('/deliveryman/:id/notifications', NotificationController.index);
 routes.put('/notification/:id', NotificationController.update);
-
-routes.get(
-  '/deliveries/problems',
-  authMiddleware,
-  DeliveryProblemController.index
-);
-
-routes.get(
-  '/delivery/:id/problems',
-  authMiddleware,
-  DeliveryProblemController.show
-);
-
-routes.delete(
-  '/problem/:id/cancel-delivery',
-  authMiddleware,
-  DeliveryProblemController.delete
-);
 
 routes.post('/delivery/:id/problems', DeliveryProblemController.store);
 
@@ -67,5 +54,11 @@ routes.get('/orders', OrderController.index);
 routes.post('/orders', OrderController.store);
 routes.put('/order/:id', OrderController.update);
 routes.delete('/order/:id', OrderController.delete);
+
+routes.get('/deliveries/problems', DeliveryProblemController.index);
+
+routes.get('/delivery/:id/problems', DeliveryProblemController.show);
+
+routes.delete('/problem/:id/cancel-delivery', DeliveryProblemController.delete);
 
 export default routes;

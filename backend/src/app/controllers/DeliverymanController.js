@@ -5,6 +5,8 @@ import File from '../models/File';
 
 class DeliverymanController {
   async index(req, res) {
+    const { page = 1 } = req.query;
+
     const deliverymans = await Deliveryman.findAll({
       attributes: ['id', 'name', 'email', 'avatar_id'],
       include: [
@@ -14,6 +16,8 @@ class DeliverymanController {
           attributes: ['name', 'path', 'url'],
         },
       ],
+      limit: 20,
+      offset: (page - 1) * 20,
     });
 
     return res.json(deliverymans);
